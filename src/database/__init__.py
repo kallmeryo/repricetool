@@ -107,34 +107,31 @@ class Database:
                 ),
             )
 
-    def get_item_name(self, item_id):
+    def get_item(self, item_id):
         """
-        Get the name of an item by its ID from the database."""
+        Get an item's name and slug by its ID.
+
+        Args:
+            item_id (str): The ID of the item.
+
+        Returns:
+            tuple[str, str] | None:
+                (name, slug), or None if the item doesn't exist.
+        """
         with sqlite3.connect(self.path) as con:
+            self.logger.debug("Looking up item %s", item_id)
+
             row = con.execute(
                 """
-            SELECT name
-            FROM items
-            WHERE id = ?
-        """,
+                SELECT name, slug
+                FROM items
+                WHERE id = ?
+                """,
                 (item_id,),
             ).fetchone()
 
-            return row[0] if row else None
-
-    def get_item_slug(self, item_id):
-        """
-        Get the slug of an item by its ID from the database.
-        """
-        with sqlite3.connect(self.path) as con:
-            self.logger.debug("Looking up slug for item %s", item_id)
-            row = con.execute(
-                """SELECT slug FROM items WHERE id = ?""",
-                (item_id,),
-            ).fetchone()
-
-            return row[0] if row else None
-
+            return row if row else None
+        
     def my_orders(self):
         """
         Load all visible user orders from the database.
