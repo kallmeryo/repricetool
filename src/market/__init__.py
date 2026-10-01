@@ -1,20 +1,49 @@
 import requests
 import logging
+import threading
+import time
 
 API_URL = "https://api.warframe.market/"
+
+
 class MarketClient:
-    def __init__(self, session:requests.Session):
+    REQUEST_INTERVAL = 1 / 3  # 3 requests per second
+
+    def __init__(self, session: requests.Session):
+        """Initialize the MarketClient with a requests session."""
         self.logger = logging.getLogger(__name__)
         self.session = session
+        self._last_request_time = 0.0
+        self._request_lock = threading.Lock()
+
+    def _request(self, method, url, **kwargs):
+        with self._request_lock:
+            now = time.monotonic()
+            elapsed = now - self._last_request_time
+
+            if elapsed < self.REQUEST_INTERVAL:
+                time.sleep(self.REQUEST_INTERVAL - elapsed)
+
+            self._last_request_time = time.monotonic()
+            return self.session.request(method, url, **kwargs)
 
     def get_items(self):
+        """
+        Fetch the list of items from the Warframe Market API.
+        """
         try:
-            request = self.session.get(f"{API_URL}v2/items")
-            response = request.json()
-            self.logger.info("Fetched %d items from Warframe Market API", len(response["data"]))
-            return response["data"]
-        except requests.exceptions.RequestException as e:
-            self.logger.error("Error fetching items from Warframe Market API: %s", e)
+            response = self._request("GET", f"{API_URL}v2/items")
+            data = response.json().get("data", [])
+
+            if not isinstance(data, list):
+                self.logger.error("Unexpected items response")
+                return []
+
+            self.logger.info("Fetched %d items", len(data))
+            return data
+
+        except (requests.RequestException, ValueError) as e:
+            self.logger.error("Error fetching items: %s", e)
             return []
 
     def update_listing(self, order_id, price):
@@ -29,36 +58,64 @@ class MarketClient:
             dict: A dictionary containing the response from the API.
         """
         try:
-            payload = {"platinum": price}
-            request = self.session.put(f"{API_URL}v2/orders/{order_id}", json=payload)
-            response = request.json()
-            self.logger.info("Updated order %s with new price %d", order_id, price)
-            return response
-        except requests.exceptions.RequestException as e:
-            self.logger.error("Error updating order %s: %s", order_id, e)
-            return {"error": str(e)}
+            response = self._request(
+                "PUT",
+                f"{API_URL}v2/orders/{order_id}",
+                json={"platinum": price},
+            )
+
+            data = response.json()
+
+            self.logger.info(
+                "Updated order %s to %d platinum",
+                order_id,
+                price,
+            )
+
+            return data
+
+        except (requests.RequestException, ValueError) as e:
+            self.logger.error(
+                "Error updating order %s: %s",
+                order_id,
+                e,
+            )
+            return None
 
     def get_my_order(self):
         """
         Fetch the user's orders from the Warframe Market API and store them in the database.
-        
+
         Returns:
             list: A list of user orders.
         Requires:
             - The user must be logged in to the Warframe Market API.
         """
         try:
-            request = self.session.get(f"{API_URL}v2/orders/my")
-            request.raise_for_status()
-            response = request.json()
-            orders = response if isinstance(response, list) else response.get("data", []) if isinstance(response, dict) else []
+            response = self._request(
+                "GET",
+                f"{API_URL}v2/orders/my",
+            )
+            response.raise_for_status()
+
+            data = response.json()
+
+            if isinstance(data, list):
+                orders = data
+            elif isinstance(data, dict):
+                orders = data.get("data", [])
+            else:
+                orders = []
+
             if not isinstance(orders, list):
-                self.logger.warning("Unexpected orders payload from Warframe Market API")
+                self.logger.error("Unexpected orders response")
                 return []
-            self.logger.info("Fetched %d orders from Warframe Market API", len(orders))
+
+            self.logger.info("Fetched %d orders", len(orders))
             return orders
-        except (requests.exceptions.RequestException, ValueError) as e:
-            self.logger.error("Error fetching user orders: %s", e)
+
+        except (requests.RequestException, ValueError) as e:
+            self.logger.error("Error fetching orders: %s", e)
             return []
 
     def get_item_statistics(self, item_slug):
@@ -72,7 +129,10 @@ class MarketClient:
             dict: A dictionary containing the item's statistics.
         """
         try:
-            request = self.session.get(f"{API_URL}v2/items/{item_slug}/statistics")
+            request = self._request(
+                "GET",
+                f"{API_URL}v2/items/{item_slug}/statistics",
+            )
             response = request.json()
             self.logger.info("Fetched statistics for item %s", item_slug)
             return response.get("data", [])
@@ -107,7 +167,8 @@ class MarketClient:
                 self.logger.error("Warframe Market credentials are not configured")
                 return False
 
-            response = self.session.post(
+            response = self._request(
+                "POST",
                 f"{API_URL}v1/auth/signin",
                 json=payload,
                 headers=headers,
@@ -119,19 +180,22 @@ class MarketClient:
             user = data["payload"]["user"]
 
             ingame_name = user["ingame_name"]
-            jwt_token = response.cookies.get("JWT") or self.session.cookies.get("JWT")
+            jwt_token = response.cookies.get("JWT")
+            self.logger.info("Logged in as %s", ingame_name)
 
             if not jwt_token:
-                self.logger.error("Login response did not include a JWT cookie")
+                self.logger.error(
+                    "Login response did not include an Authorization header"
+                )
                 return False
 
-            self.session.headers.update({
-                "Authorization": f"Bearer {jwt_token}",
-                "platform": "pc",
-                "language": "en",
-                "auth_type": "header",
-            })
-            self.logger.info("Logged in as %s", ingame_name)
+            self.session.headers.update(
+                {
+                    "Authorization": f"Bearer {jwt_token}",
+                    "platform": "pc",
+                    "language": "en",
+                }
+            )
             return True
 
         except (requests.RequestException, ValueError, KeyError, TypeError) as e:
