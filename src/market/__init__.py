@@ -7,7 +7,8 @@ API_URL = "https://api.warframe.market/"
 
 
 class MarketClient:
-    REQUEST_INTERVAL = 1 / 3  # 3 requests per second
+    REQUEST_INTERVAL = 0.35  # 3 requests per second
+    REQUEST_TIMEOUT = 15
 
     def __init__(self, session: requests.Session):
         """Initialize the MarketClient with a requests session."""
@@ -25,6 +26,7 @@ class MarketClient:
                 time.sleep(self.REQUEST_INTERVAL - elapsed)
 
             self._last_request_time = time.monotonic()
+            kwargs.setdefault("timeout", self.REQUEST_TIMEOUT)
             return self.session.request(method, url, **kwargs)
 
     def get_items(self):
@@ -63,7 +65,7 @@ class MarketClient:
                 f"{API_URL}v2/orders/{order_id}",
                 json={"platinum": price},
             )
-
+            response.raise_for_status()
             data = response.json()
 
             self.logger.info(
@@ -129,13 +131,14 @@ class MarketClient:
             dict: A dictionary containing the item's statistics.
         """
         try:
-            request = self._request(
+            response = self._request(
                 "GET",
                 f"{API_URL}v2/items/{item_slug}/statistics",
             )
-            response = request.json()
+            response.raise_for_status()
+            data = response.json()
             self.logger.info("Fetched statistics for item %s", item_slug)
-            return response.get("data", [])
+            return data.get("data", [])
         except requests.exceptions.RequestException as e:
             self.logger.error("Error fetching statistics for item %s: %s", item_slug, e)
             return []

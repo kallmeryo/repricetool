@@ -59,7 +59,6 @@ class Database:
         """,
                 (id, name, slug, max_rank),
             )
-            self.logger.info("Item %s saved to database", name)
 
     def insert_order(self, **order):
         """
@@ -131,7 +130,7 @@ class Database:
             ).fetchone()
 
             return row if row else None
-        
+
     def my_orders(self):
         """
         Load all visible user orders from the database.
