@@ -146,10 +146,9 @@ def main(args=None):
                 logger.info("Repricing queue is empty")
 
         message = (
-            "**Reprice Notification**\n\n"
-            f"- Orders checked: {len(user_orders)}\n"
+            f"```- Orders checked: {len(user_orders)}\n"
             f"- Orders queued: {len(repricing_queue)}\n"
-            f"- Orders updated: {updated_orders}\n```\n"
+            f"- Orders updated: {updated_orders}```\n\n"
         )
 
         if repricing_queue:
