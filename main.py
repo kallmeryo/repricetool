@@ -145,22 +145,22 @@ def main(args=None):
             else:
                 logger.info("Repricing queue is empty")
 
-    message = (
-        "**Reprice Notification**\n\n"
-        f"- Orders checked: {len(user_orders)}\n"
-        f"- Orders queued: {len(repricing_queue)}\n"
-        f"- Orders updated: {updated_orders}\n```\n"
-    )
+        message = (
+            "**Reprice Notification**\n\n"
+            f"- Orders checked: {len(user_orders)}\n"
+            f"- Orders queued: {len(repricing_queue)}\n"
+            f"- Orders updated: {updated_orders}\n```\n"
+        )
 
-    if repricing_queue:
-        message += "**Price changes:**\n"
+        if repricing_queue:
+            message += "**Price changes:**\n"
 
-        for order in repricing_queue:
-            message += f"```{order['item_name']}: {order['old_price']}p → {order['price']}p\n```"
-    else:
-        message += "No price changes needed.\n"
+            for order in repricing_queue:
+                message += f"```{order['item_name']}: {order['old_price']}p → {order['price']}p\n```"
+        else:
+            message += "No price changes needed.\n"
 
-    discord.send(message)
+        discord.send(message)
 
     logger.info("Repricing complete")
 
