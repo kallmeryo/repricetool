@@ -131,23 +131,25 @@ def main(args=None):
                 )
                 logger.info("%s added to queue for update", item_name)
 
-            logger.info("Processing repricing queue")
+            if repricing_queue:
+                logger.info("Processing repricing queue")
+                for order in repricing_queue:
+                    success = client.update_listing(
+                        order_id=order["order_id"],
+                        price=order["price"],
+                        item_name=order["item_name"],
+                    )
 
-            for order in repricing_queue:
-                success = client.update_listing(
-                    order_id=order["order_id"],
-                    price=order["price"],
-                    item_name=order["item_name"],
-                )
-
-                if success:
-                    updated_orders += 1
+                    if success:
+                        updated_orders += 1
+            else:
+                logger.info("Repricing queue is empty")
 
     message = (
         "**Reprice Notification**\n\n"
-        f"```Orders checked: {len(user_orders)}\n"
-        f"Orders queued: {len(repricing_queue)}\n"
-        f"Orders updated: {updated_orders}\n```\n"
+        f"- Orders checked: {len(user_orders)}\n"
+        f"- Orders queued: {len(repricing_queue)}\n"
+        f"- Orders updated: {updated_orders}\n```\n"
     )
 
     if repricing_queue:
