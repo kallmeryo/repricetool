@@ -59,6 +59,3 @@ class Repricer:
             return None
 
         return target_price
-
-
-repricer = Repricer()

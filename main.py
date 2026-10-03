@@ -9,7 +9,7 @@ from src.notifier import DiscordNotifier
 from src.database import Database
 from src.logger import setup_logging
 from src.market import MarketClient
-from src.repricer import Repricer
+from src.priceEngine import Repricer
 
 setup_logging()
 
@@ -139,7 +139,7 @@ def main(args=None):
                     price=order["price"],
                     item_name=order["item_name"],
                 )
-                
+
                 if success:
                     updated_orders += 1
 
