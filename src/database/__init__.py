@@ -26,20 +26,6 @@ class Database:
                     max_rank INTEGER DEFAULT NULL
                 )
             """)
-            con.execute("""
-                CREATE TABLE IF NOT EXISTS user_orders (
-                    id TEXT PRIMARY KEY,
-                    type TEXT NOT NULL,
-                    platinum INTEGER NOT NULL,
-                    quantity INTEGER NOT NULL,
-                    perTrade INTEGER NOT NULL,
-                    rank INTEGER,
-                    visible INTEGER DEFAULT 0,
-                    createdAt TEXT,
-                    updatedAt TEXT,
-                    itemId TEXT,
-                    FOREIGN KEY (itemId) REFERENCES items(id))
-                """)
             self.logger.info("Database tables are ready")
 
     def insert_item(self, id, name, slug, max_rank=None):
@@ -58,52 +44,6 @@ class Database:
                 max_rank = excluded.max_rank
         """,
                 (id, name, slug, max_rank),
-            )
-
-    def insert_order(self, **order):
-        """
-        Insert or update a user order in the database."""
-        with sqlite3.connect(self.path) as con:
-            self.logger.debug("Saving order %s", order["id"])
-            con.execute(
-                """
-            INSERT INTO user_orders (
-                id,
-                type,
-                platinum,
-                quantity,
-                perTrade,
-                rank,
-                visible,
-                createdAt,
-                updatedAt,
-                itemId
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-
-            ON CONFLICT(id) DO UPDATE SET
-                type = excluded.type,
-                platinum = excluded.platinum,
-                quantity = excluded.quantity,
-                perTrade = excluded.perTrade,
-                rank = excluded.rank,
-                visible = excluded.visible,
-                createdAt = excluded.createdAt,
-                updatedAt = excluded.updatedAt,
-                itemId = excluded.itemId
-            """,
-                (
-                    order["id"],
-                    order["type"],
-                    order["platinum"],
-                    order["quantity"],
-                    order["perTrade"],
-                    order.get("rank"),
-                    order["visible"],
-                    order["createdAt"],
-                    order["updatedAt"],
-                    order["itemId"],
-                ),
             )
 
     def get_item(self, item_id):
