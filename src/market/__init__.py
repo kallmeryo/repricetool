@@ -48,33 +48,42 @@ class MarketClient:
             self.logger.error("Error fetching items: %s", e)
             return []
 
-    def update_listing(self, order_id, price):
+    def update_listing(self, order_id, price, item_name):
         """
         Update the price of a specific order on the Warframe Market API.
 
         Args:
             order_id (str): The ID of the order to update.
             price (int): The new price for the order.
+            item_name (str): The item name used for logging.
 
         Returns:
-            dict: A dictionary containing the response from the API.
+            bool: True if the update succeeded, otherwise False.
         """
         try:
             response = self._request(
-                "PUT",
-                f"{API_URL}v2/orders/{order_id}",
+                "PATCH",
+                f"{API_URL}v2/order/{order_id}",
                 json={"platinum": price},
             )
             response.raise_for_status()
-            data = response.json()
 
             self.logger.info(
                 "Updated order %s to %d platinum",
-                order_id,
+                item_name,
                 price,
             )
 
-            return data
+            return True
+
+        except requests.RequestException as e:
+            self.logger.error(
+                "Failed to update %s (%s): %s",
+                item_name,
+                order_id,
+                e,
+            )
+            return False
 
         except (requests.RequestException, ValueError) as e:
             self.logger.error(
@@ -120,9 +129,9 @@ class MarketClient:
             self.logger.error("Error fetching orders: %s", e)
             return []
 
-    def get_item_statistics(self, item_slug):
+    def get_item_statistics(self, item_slug, item_name):
         """
-        Fetch the statistics for a specific item from the Warframe Market API.
+        Fetch the closed statistics for a specific item from the Warframe Market API.
 
         Args:
             item_slug (str): The slug of the item for which to fetch statistics.
@@ -133,15 +142,19 @@ class MarketClient:
         try:
             response = self._request(
                 "GET",
-                f"{API_URL}v2/items/{item_slug}/statistics",
+                f"{API_URL}v1/items/{item_slug}/statistics",
             )
             response.raise_for_status()
             data = response.json()
-            self.logger.info("Fetched statistics for item %s", item_slug)
-            return data.get("data", [])
+            self.logger.info("Fetched statistics for %s", item_name)
+            return data["payload"]["statistics_closed"]
         except requests.exceptions.RequestException as e:
-            self.logger.error("Error fetching statistics for item %s: %s", item_slug, e)
-            return []
+            self.logger.error(
+                "Error fetching statistics for item %s: %s",
+                item_name,
+                e,
+            )
+            return None
 
     def login(self, user_email, user_password):
         """
