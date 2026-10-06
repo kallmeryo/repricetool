@@ -69,6 +69,7 @@ def main(args=None):
 
     if parsed_args.command == "update-items":
         update_items(client, db)
+        logger.info("update complete.")
     else:
         if client.login(USER_EMAIL, USER_PASSWORD):
             logger.info("Fetching user orders")
@@ -161,7 +162,7 @@ def main(args=None):
 
         discord.send(message)
 
-    logger.info("Repricing complete")
+        logger.info("Repricing complete")
 
 
 if __name__ == "__main__":
