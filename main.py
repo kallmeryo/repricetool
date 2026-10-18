@@ -153,7 +153,7 @@ def main(args=None):
         )
 
         if repricing_queue:
-            message += "**Change Logs:**\n"
+            message += "**Change Log:**\n"
 
             for order in repricing_queue:
                 message += f"```{order['item_name']}: {order['old_price']}p → {order['price']}p\n```"
