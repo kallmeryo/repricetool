@@ -147,13 +147,13 @@ def main(args=None):
                 logger.info("Repricing queue is empty")
 
         message = (
-            f"```- Orders checked: {len(user_orders)}\n"
+            f"- Orders checked: {len(user_orders)}\n"
             f"- Orders queued: {len(repricing_queue)}\n"
-            f"- Orders updated: {updated_orders}```\n\n"
+            f"- Orders updated: {updated_orders}\n"
         )
 
         if repricing_queue:
-            message += "**Price changes:**\n"
+            message += "**Change Logs:**\n"
 
             for order in repricing_queue:
                 message += f"```{order['item_name']}: {order['old_price']}p → {order['price']}p\n```"
