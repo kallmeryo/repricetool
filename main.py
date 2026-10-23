@@ -145,6 +145,13 @@ def main(args=None):
                         updated_orders += 1
             else:
                 logger.info("Repricing queue is empty")
+        else:
+            logger.error("Could not log in to Warframe Market API; aborting repricing")
+            discord.send(
+                "Warframe Market repricing aborted: login failed. "
+                "Check service logs and API availability."
+            )
+            return 1
 
         message = (
             f"- Orders checked: {len(user_orders)}\n"
